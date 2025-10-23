@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ project_name or "Système Logique ABA" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <header class="card-header">
+                <h1 class="title"><i class="fas fa-brain"></i> {{ project_name or "Système Logique ABA" }}</h1> 
+                <p class="subtitle">Analyse d'Argumentation Basée sur les Assumptions (ABA). Entrez votre configuration ci-dessous.</p>
+            </header>
+
+            <form method="post" action="{{ url_for('index') }}" class="input-area">
+                <label for="text_input" class="label"><i class="fas fa-keyboard"></i> Configuration ABA :</label>
+                <textarea id="text_input" name="text_input" placeholder="L: [a,b,c,q,p]
+A: [a,b]
+C(a): r
+[r1]: p <- q,a
+PREF: a > b" required rows="10">{{ user_input or "" }}</textarea>
+                <div class="row">
+                    <button class="btn primary"><i class="fas fa-play"></i> Lancer l'Analyse</button>
+                </div>
+                {% if error %}
+                    <div class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+                {% endif %}
+            </form>
+
+            {% if from_options %}
+            <section class="actions">
+                <h2 class="title" style="font-size: 22px; text-transform: none;"><i class="fas fa-cogs"></i> Options d'Analyse</h2>
+                <form method="post" action="{{ url_for('options', user_input=user_input_path) }}">
+                    <div class="grid">
+                        <button name="action" value="create_arguments" class="btn"><i class="fas fa-file-alt"></i> Création des arguments</button>
+                        <button name="action" value="create_attacks" class="btn"><i class="fas fa-exclamation-triangle"></i> Création des attaques</button>
+                        <button name="action" value="calculate_admissible" class="btn secondary-btn"><i class="fas fa-puzzle-piece"></i> Sémantiques Admissibles</button>
+                        <button name="action" value="auto_convert_non_circular" class="btn"><i class="fas fa-redo"></i> Conversion non-circulaire</button>
+                        <button name="action" value="auto_convert_atomic" class="btn"><i class="fas fa-atom"></i> Conversion ABA Atomique</button>
+                        <button name="action" value="handle_preferences_assumptions" class="btn"><i class="fas fa-balance-scale"></i> Afficher les préférences</button>
+                        <button name="action" value="handle_normal_reverse_attacks" class="btn"><i class="fas fa-exchange-alt"></i> Attaques Normales/Inverses</button>
+                    </div>
+                </form>
+            </section>
+            {% endif %}
+
+            {% if result %}
+            <section class="result">
+                <h2><i class="fas fa-check-circle"></i> Résultat de l'Analyse</h2>
+                <div class="result-box">
+                    {% if result is iterable %}
+                        {% if result|length == 3 and result[0] is iterable and result[1] is iterable and result[2] is iterable %}
+                            <h3><i class="fas fa-list-ul"></i> Nouvelles Assumptions (A) et Littéraux (L)</h3>
+                            <ul>
+                                <li><strong>A</strong>: [ {{ result[0][0]|join(', ') }} ]</li>
+                                <li><strong>L</strong>: [ {{ result[0][1]|join(', ') }} ]</li>
+                            </ul>
+                            <h3><i class="fas fa-handshake-slash"></i> Nouveaux Contraires (C)</h3>
+                            <ol>
+                                {% for item in result[1] %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ol>
+                            <h3><i class="fas fa-scroll"></i> Nouvelles Règles (R)</h3>
+                            <ol>
+                                {% for item in result[2] %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ol>
+
+                        {% elif result|length == 2 and result[0] is iterable and result[1] is iterable %}
+                            <h3><i class="fas fa-arrow-right"></i> Attaques Normales</h3>
+                            {% if result[0] %}
+                                <ol>
+                                    {% for item in result[0] %}
+                                        <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ol>
+                            {% else %}
+                                <p style="color: #6c757d; font-style: italic;">Aucune attaque normale trouvée.</p>
+                            {% endif %}
+
+                            <h3><i class="fas fa-arrow-left"></i> Attaques Inverses</h3>
+                            {% if result[1] %}
+                                <ol>
+                                    {% for item in result[1] %}
+                                        <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ol>
+                            {% else %}
+                                <p style="color: #6c757d; font-style: italic;">Aucune attaque inverse trouvée.</p>
+                            {% endif %}
+
+                        {% else %}
+                            <ol>
+                                {% for item in result %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ol>
+                            {% if not result %}<p style="color: #6c757d; font-style: italic;">Aucun résultat à afficher.</p>{% endif %}
+                        {% endif %}
+                    {% else %}
+                        <p>{{ result }}</p>
+                    {% endif %}
+                </div>
+            </section>
+            {% endif %}
+            
+            {% if show_graph %}
+                <hr style="border-top: 1px dashed #ced4da; margin: 20px 0;">
+                <section class="graph-display">
+                    <h2><i class="fas fa-project-diagram"></i> Graphe d'Argumentation</h2>
+                    <div id="cy" class="cyto-container">
+                        <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#6c757d;font-style:italic;">
+                            Chargement du graphe...
+                        </div>
+                    </div>
+                </section>
+
+                <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    fetch('/api/graph_data')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Erreur réseau: ' + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(cytoElements => {
+                            console.log('Données du graphe reçues:', cytoElements);
+                            
+                            const container = document.getElementById('cy');
+                            if (!container) {
+                                console.error('Container #cy non trouvé');
+                                return;
+                            }
+                            
+                            if (cytoElements && cytoElements.length > 0) {
+                                container.innerHTML = '';
+                                
+                                const cy = cytoscape({
+                                    container: container,
+                                    elements: cytoElements,
+                                    style: [
+                                        {
+                                            selector: 'node',
+                                            style: {
+                                                'background-color': '#007bff',
+                                                'label': 'data(label)',
+                                                'color': '#fff',
+                                                'text-valign': 'center',
+                                                'text-halign': 'center',
+                                                'font-size': '12px',
+                                                'width': '80px',
+                                                'height': '40px',
+                                                'shape': 'round-rectangle'
+                                            }
+                                        },
+                                        {
+                                            selector: 'edge',
+                                            style: {
+                                                'width': 3,
+                                                'line-color': '#dc3545',
+                                                'target-arrow-color': '#dc3545',
+                                                'target-arrow-shape': 'triangle',
+                                                'curve-style': 'bezier',
+                                                'arrow-scale': 1.5
+                                            }
+                                        }
+                                    ],
+                                    layout: {
+                                        name: 'cose',
+                                        padding: 20,
+                                        animate: true,
+                                        animationDuration: 1000
+                                    }
+                                });
+                                
+                                cy.fit();
+                                cy.center();
+                                
+                            } else {
+                                container.innerHTML = 
+                                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#6c757d;font-style:italic;padding:20px;text-align:center;">Aucune donnée de graphe disponible<br>Générez d\'abord des arguments et attaques</div>';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du chargement du graphe:', error);
+                            const container = document.getElementById('cy');
+                            if (container) {
+                                container.innerHTML = 
+                                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#dc3545;padding:20px;text-align:center;">Erreur de chargement du graphe<br>' + error.message + '</div>';
+                            }
+                        });
+                });
+                </script>
+            {% endif %}
+            <footer class="card-footer">
+                <small>Projet d'Argumentation Logique — Fait avec 🔥 et Python/Flask</small>
+            </footer>
+        </section>
+    </main>
+</body>
+</html>
